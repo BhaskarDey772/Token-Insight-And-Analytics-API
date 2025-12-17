@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "Token Insight & Analytics API",
+    "description": "API collection for Token Insight and HyperLiquid PnL endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Get Token Insight - Bitcoin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"vs_currency\": \"usd\",\n  \"history_days\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/token/bitcoin/insight",
+          "host": ["{{base_url}}"],
+          "path": ["api", "token", "bitcoin", "insight"]
+        }
+      }
+    },
+    {
+      "name": "Get Token Insight - Ethereum",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"vs_currency\": \"usd\",\n  \"history_days\": 7\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/token/ethereum/insight",
+          "host": ["{{base_url}}"],
+          "path": ["api", "token", "ethereum", "insight"]
+        }
+      }
+    },
+    {
+      "name": "Get Token Insight - Chainlink",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"vs_currency\": \"usd\",\n  \"history_days\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/token/chainlink/insight",
+          "host": ["{{base_url}}"],
+          "path": ["api", "token", "chainlink", "insight"]
+        }
+      }
+    },
+    {
+      "name": "Get HyperLiquid PnL",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/hyperliquid/0xabc123/pnl?start=2025-08-01&end=2025-08-03",
+          "host": ["{{base_url}}"],
+          "path": ["api", "hyperliquid", "0xabc123", "pnl"],
+          "query": [
+            {
+              "key": "start",
+              "value": "2025-08-01"
+            },
+            {
+              "key": "end",
+              "value": "2025-08-03"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get HyperLiquid PnL - Invalid Date Range",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/hyperliquid/0xabc123/pnl?start=2025-08-03&end=2025-08-01",
+          "host": ["{{base_url}}"],
+          "path": ["api", "hyperliquid", "0xabc123", "pnl"],
+          "query": [
+            {
+              "key": "start",
+              "value": "2025-08-03"
+            },
+            {
+              "key": "end",
+              "value": "2025-08-01"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}
+
