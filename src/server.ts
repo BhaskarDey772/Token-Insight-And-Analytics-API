@@ -30,7 +30,8 @@ app.get('/', (_req: Request, res: Response) => {
     version: '1.0.0',
     endpoints: {
       tokenInsight: 'POST /api/token/:id/insight',
-      hyperliquidPnL: 'GET /api/hyperliquid/:wallet/pnl?start=YYYY-MM-DD&end=YYYY-MM-DD'
+      hyperliquidPnL:
+        'GET /api/hyperliquid/:wallet/pnl?start=YYYY-MM-DD&end=YYYY-MM-DD (wallet must be the configured HyperLiquid user id)'
     }
   });
 });

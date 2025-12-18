@@ -58,7 +58,7 @@ curl -X POST http://localhost:3000/api/token/bitcoin/insight \
 
 ### HyperLiquid PnL
 ```bash
-curl "http://localhost:3000/api/hyperliquid/0xabc123/pnl?start=2025-08-01&end=2025-08-03"
+curl "http://localhost:3000/api/hyperliquid/0x020ca66c30bec2c4fe3861a94e4db4a498a35872/pnl?start=2025-08-01&end=2025-08-03"
 ```
 
 ## Run Tests
@@ -68,6 +68,7 @@ npm test
 
 ## Import Postman Collection
 Import `postman_collection.json` into Postman for easy API testing.
+
 
 
 

@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import { OpenAI } from 'openai';
 import { TokenData } from './coingeckoService';
 
 export interface InsightResult {
@@ -18,26 +18,41 @@ export const generateInsight = async (
   marketChart: any | null = null
 ): Promise<InsightResult> => {
   if (process.env.OPENAI_API_KEY) {
-    return await generateAiSdkInsight(tokenData, marketChart);
+    return await generateOpenAIInsight(tokenData, marketChart);
   }
   return generateFallbackInsight(tokenData);
 };
 
-const generateAiSdkInsight = async (
+const generateOpenAIInsight = async (
   tokenData: TokenData,
   marketChart: any | null
 ): Promise<InsightResult> => {
   try {
-    const prompt = buildPrompt(tokenData, marketChart);
-
-    const { text } = await generateText({
-      model: process.env.OPENAI_MODEL || 'openai/gpt-4o-mini',
-      system:
-        'You are a cryptocurrency market analyst. Provide insights in valid JSON format only.',
-      prompt
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
     });
 
-    const content = text || '{}';
+    const prompt = buildPrompt(tokenData, marketChart);
+
+    const response = await client.chat.completions.create({
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a cryptocurrency market analyst. Provide insights in valid JSON format only.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.7,
+      max_tokens: 500
+    });
+
+    const content = response.choices[0]?.message?.content ?? '{}';
     const parsed = JSON.parse(content);
 
     return {
@@ -47,13 +62,13 @@ const generateAiSdkInsight = async (
         ...parsed
       },
       model: {
-        provider: 'ai-sdk',
-        model: process.env.OPENAI_MODEL || 'openai/gpt-4o-mini'
+        provider: 'openai',
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini'
       }
     };
   } catch (error: any) {
     // eslint-disable-next-line no-console
-    console.error('AI SDK error while generating insight:', error.message);
+    console.error('OpenAI API error while generating insight:', error.message);
     return generateFallbackInsight(tokenData);
   }
 };

@@ -1,226 +1,227 @@
-import axios from 'axios';
-import HyperLiquidPnL, {
-  DailyPnL,
-  HyperLiquidPnLAttrs,
-  HyperLiquidSummary
-} from '../models/HyperLiquidPnL';
-import {
-  hyperliquidUserFillsRequestSchema,
-  hyperliquidUserId
-} from '../types/hyperliquid';
+import axios from "axios";
+import { hyperliquidUserId } from "../types/hyperliquid";
 
 const HYPERLIQUID_API_URL =
-  process.env.HYPERLIQUID_API_URL || 'https://api.hyperliquid.xyz';
+  process.env.HYPERLIQUID_API_URL || "https://api.hyperliquid.xyz";
+
+/* ================= TYPES ================= */
 
 export interface HyperliquidTrade {
-  time?: number;
-  timestamp?: number;
-  closedPnL?: string | number;
-  pnl?: string | number;
-  fee?: string | number;
-  [key: string]: any;
+  time: number;
+  closedPnl?: number | string;
+  fee?: number | string;
 }
 
 export interface HyperliquidFunding {
-  time?: number;
-  timestamp?: number;
-  amount?: string | number;
-  [key: string]: any;
+  time: number;
+  delta?: {
+    usdc?: number | string;
+  };
 }
 
-export interface HyperliquidUserState {
-  positions?: Array<{
-    positionValue?: string | number;
-    entryPrice?: string | number;
-    markPrice?: string | number;
-  }>;
-  [key: string]: any;
+export interface HyperliquidAssetPosition {
+  position: {
+    coin: string;
+    szi: number | string;     // position size (notional)
+    entryPx: number | string;
+    markPx: number | string;
+  };
 }
 
-export interface WalletPnLResponse extends HyperLiquidPnLAttrs {}
+export interface DailyPnL {
+  date: string;
+  realized_pnl_usd: number;
+  unrealized_pnl_usd: number;
+  fees_usd: number;
+  funding_usd: number;
+  net_pnl_usd: number;
+  equity_usd: number;
+}
 
-export const fetchWalletPnL = async (
-  wallet: string,
+export interface WalletPnLResponse {
+  wallet: string;
+  start: string;
+  end: string;
+  daily: DailyPnL[];
+  summary: {
+    total_realized_usd: number;
+    total_unrealized_usd: number;
+    total_fees_usd: number;
+    total_funding_usd: number;
+    net_pnl_usd: number;
+  };
+  diagnostics: {
+    data_source: string;
+    last_api_call: string;
+    notes: string;
+  };
+}
+
+/* ================= MAIN SERVICE ================= */
+
+export async function fetchWalletPnL(
   startDate: string,
   endDate: string
-): Promise<WalletPnLResponse> => {
-  try {
-    const startTime = new Date(startDate).getTime();
-    const endTime = new Date(endDate).getTime();
+): Promise<WalletPnLResponse> {
+  const startTime = new Date(startDate).getTime();
+  const endTime = new Date(endDate).getTime();
 
-    const fillsRequestBody = hyperliquidUserFillsRequestSchema.parse({
-      type: 'userFillsByTime',
-      user: hyperliquidUserId,
-      startTime,
-      endTime,
-      aggregateByTime: false
-    });
+  /* -------- Fetch Trades -------- */
+  const tradesResp = await axios.post(`${HYPERLIQUID_API_URL}/info`, {
+    type: "userFillsByTime",
+    user: hyperliquidUserId,
+    startTime,
+    endTime,
+    aggregateByTime: false
+  });
 
-    let userState: HyperliquidUserState | null = null;
-    try {
-      const response = await axios.post(`${HYPERLIQUID_API_URL}/info`, {
-        type: 'clearinghouseState',
-        user: hyperliquidUserId
-      });
-      userState = response.data;
-    } catch (error: any) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `Could not fetch user state for static user ${hyperliquidUserId}:`,
-        error.message
-      );
-    }
+  const trades = (tradesResp.data || []) as HyperliquidTrade[];
 
-    let fundingHistory: HyperliquidFunding[] = [];
-    try {
-      const response = await axios.post(`${HYPERLIQUID_API_URL}/info`, {
-        type: 'userFunding',
-        user: hyperliquidUserId,
-        startTime,
-        endTime
-      });
-      fundingHistory = (response.data || []) as HyperliquidFunding[];
-    } catch (error: any) {
-      // eslint-disable-next-line no-console
-      console.warn(`Could not fetch funding history:`, error.message);
-    }
+  /* -------- Fetch Funding -------- */
+  const fundingResp = await axios.post(`${HYPERLIQUID_API_URL}/info`, {
+    type: "userFunding",
+    user: hyperliquidUserId,
+    startTime,
+    endTime
+  });
 
-    let trades: HyperliquidTrade[] = [];
-    try {
-      const response = await axios.post(`${HYPERLIQUID_API_URL}/info`, fillsRequestBody);
-      trades = (response.data || []) as HyperliquidTrade[];
-    } catch (error: any) {
-      // eslint-disable-next-line no-console
-      console.warn(`Could not fetch trades:`, error.message);
-    }
+  const funding = (fundingResp.data || []) as HyperliquidFunding[];
 
-    const dailyPnL = calculateDailyPnL(wallet, startDate, endDate, trades, fundingHistory, userState);
+  /* -------- Fetch Account State -------- */
+  const stateResp = await axios.post(`${HYPERLIQUID_API_URL}/info`, {
+    type: "clearinghouseState",
+    user: hyperliquidUserId
+  });
 
-    return dailyPnL;
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      throw new Error(`Wallet '${wallet}' not found or has no activity`);
-    }
-    throw new Error(`Failed to fetch HyperLiquid data: ${error.message}`);
-  }
-};
+  const assetPositions =
+    (stateResp.data?.assetPositions || []) as HyperliquidAssetPosition[];
 
-const calculateDailyPnL = (
-  wallet: string,
+  const startingEquity = Number(
+    stateResp.data?.marginSummary?.accountValue || 0
+  );
+
+  return calculateDailyPnL(
+    startDate,
+    endDate,
+    trades,
+    funding,
+    assetPositions,
+    startingEquity
+  );
+}
+
+/* ================= PNL CALCULATION ================= */
+
+function calculateDailyPnL(
   startDate: string,
   endDate: string,
   trades: HyperliquidTrade[],
-  fundingHistory: HyperliquidFunding[],
-  userState: HyperliquidUserState | null
-): WalletPnLResponse => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  funding: HyperliquidFunding[],
+  assetPositions: HyperliquidAssetPosition[],
+  startingEquity: number
+): WalletPnLResponse {
   const daily: DailyPnL[] = [];
 
-  const tradesByDate: Record<string, HyperliquidTrade[]> = {};
-  trades.forEach((trade) => {
-    const tradeDate = new Date(trade.time || trade.timestamp || 0);
-    const dateKey = tradeDate.toISOString().split('T')[0];
-    if (!tradesByDate[dateKey]) {
-      tradesByDate[dateKey] = [];
-    }
-    tradesByDate[dateKey].push(trade);
-  });
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
-  const fundingByDate: Record<string, HyperliquidFunding[]> = {};
-  fundingHistory.forEach((funding) => {
-    const fundingDate = new Date(funding.time || funding.timestamp || 0);
-    const dateKey = fundingDate.toISOString().split('T')[0];
-    if (!fundingByDate[dateKey]) {
-      fundingByDate[dateKey] = [];
-    }
-    fundingByDate[dateKey].push(funding);
-  });
+  const tradeMap = groupByDate(trades);
+  const fundingMap = groupByDate(funding);
 
-  let currentEquity = 10000;
-  let runningRealized = 0;
-  let runningUnrealized = 0;
-  let runningFees = 0;
-  let runningFunding = 0;
+  let equity = startingEquity;
+  let totalRealized = 0;
+  let totalFees = 0;
+  let totalFunding = 0;
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateKey = d.toISOString().split('T')[0];
-    const dayTrades = tradesByDate[dateKey] || [];
-    const dayFunding = fundingByDate[dateKey] || [];
+    const dateKey = d.toISOString().slice(0, 10);
 
-    let realizedPnl = 0;
+    const dayTrades = tradeMap[dateKey] || [];
+    const dayFunding = fundingMap[dateKey] || [];
+
+    let realized = 0;
     let fees = 0;
-    dayTrades.forEach((trade) => {
-      realizedPnl += parseFloat(String(trade.closedPnL ?? trade.pnl ?? 0));
-      fees += parseFloat(String(trade.fee ?? 0));
-    });
+    let fundingUsd = 0;
 
-    let funding = 0;
-    dayFunding.forEach((fund) => {
-      funding += parseFloat(String(fund.amount ?? 0));
-    });
-
-    let unrealizedPnl = 0;
-    if (userState && userState.positions) {
-      userState.positions.forEach((position) => {
-        const positionValue = parseFloat(String(position.positionValue ?? 0));
-        const entryPrice = parseFloat(String(position.entryPrice ?? 0));
-        const currentPrice = parseFloat(
-          String(position.markPrice ?? position.entryPrice ?? 0)
-        );
-        if (positionValue !== 0 && entryPrice !== 0) {
-          unrealizedPnl +=
-            ((currentPrice - entryPrice) * Math.abs(positionValue)) / entryPrice;
-        }
-      });
+    /* ---- Realized & Fees ---- */
+    for (const t of dayTrades) {
+      realized += Number(t.closedPnl || 0);
+      fees += Number(t.fee || 0);
     }
 
-    const netPnl = realizedPnl + unrealizedPnl - fees + funding;
-    currentEquity += netPnl;
+    /* ---- Funding ---- */
+    for (const f of dayFunding) {
+      fundingUsd += Number(f.delta?.usdc || 0);
+    }
 
-    runningRealized += realizedPnl;
-    runningUnrealized += unrealizedPnl;
-    runningFees += fees;
-    runningFunding += funding;
+    /* ---- Unrealized (only last day) ---- */
+    let unrealized = 0;
+    if (dateKey === endDate) {
+      for (const ap of assetPositions) {
+        const p = ap.position;
+        unrealized +=
+          (Number(p.markPx) - Number(p.entryPx)) *
+          Number(p.szi);
+      }
+    }
+
+    const net = realized + unrealized - fees + fundingUsd;
+    equity += net;
+
+    totalRealized += realized;
+    totalFees += fees;
+    totalFunding += fundingUsd;
 
     daily.push({
       date: dateKey,
-      realizedPnlUsd: parseFloat(realizedPnl.toFixed(2)),
-      unrealizedPnlUsd: parseFloat(unrealizedPnl.toFixed(2)),
-      feesUsd: parseFloat(fees.toFixed(2)),
-      fundingUsd: parseFloat(funding.toFixed(2)),
-      netPnlUsd: parseFloat(netPnl.toFixed(2)),
-      equityUsd: parseFloat(currentEquity.toFixed(2))
+      realized_pnl_usd: round(realized),
+      unrealized_pnl_usd: round(unrealized),
+      fees_usd: round(fees),
+      funding_usd: round(fundingUsd),
+      net_pnl_usd: round(net),
+      equity_usd: round(equity)
     });
   }
 
-  const summary: HyperLiquidSummary = {
-    totalRealizedUsd: parseFloat(runningRealized.toFixed(2)),
-    totalUnrealizedUsd: parseFloat(runningUnrealized.toFixed(2)),
-    totalFeesUsd: parseFloat(runningFees.toFixed(2)),
-    totalFundingUsd: parseFloat(runningFunding.toFixed(2)),
-    netPnlUsd: parseFloat(
-      (runningRealized + runningUnrealized - runningFees + runningFunding).toFixed(2)
-    )
-  };
-
   return {
-    wallet,
+    wallet: hyperliquidUserId,
     start: startDate,
     end: endDate,
     daily,
-    summary,
+    summary: {
+      total_realized_usd: round(totalRealized),
+      total_unrealized_usd: round(
+        daily.reduce((a, d) => a + d.unrealized_pnl_usd, 0)
+      ),
+      total_fees_usd: round(totalFees),
+      total_funding_usd: round(totalFunding),
+      net_pnl_usd: round(
+        totalRealized -
+          totalFees +
+          totalFunding +
+          daily[daily.length - 1]?.unrealized_pnl_usd
+      )
+    },
     diagnostics: {
-      dataSource: 'hyperliquid_api',
-      lastApiCall: new Date(),
+      data_source: "hyperliquid_api",
+      last_api_call: new Date().toISOString(),
       notes:
-        'PnL calculated using aggregated user fills and funding. Unrealized PnL is approximated from user state.'
+        "Funding parsed from delta.usdc; unrealized PnL calculated from current mark price and applied on final day only"
     }
   };
-};
+}
 
-export default {
-  fetchWalletPnL
-};
+/* ================= HELPERS ================= */
 
+function groupByDate<T extends { time: number }>(
+  items: T[]
+): Record<string, T[]> {
+  return items.reduce((acc, item) => {
+    const key = new Date(item.time).toISOString().slice(0, 10);
+    acc[key] ||= [];
+    acc[key].push(item);
+    return acc;
+  }, {} as Record<string, T[]>);
+}
 
+const round = (n: number) => Number(n.toFixed(2));
