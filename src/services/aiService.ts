@@ -1,0 +1,140 @@
+import { generateText } from 'ai';
+import { TokenData } from './coingeckoService';
+
+export interface InsightResult {
+  insight: {
+    reasoning: string;
+    sentiment: string;
+    [key: string]: any;
+  };
+  model: {
+    provider: string;
+    model: string;
+  };
+}
+
+export const generateInsight = async (
+  tokenData: TokenData,
+  marketChart: any | null = null
+): Promise<InsightResult> => {
+  if (process.env.OPENAI_API_KEY) {
+    return await generateAiSdkInsight(tokenData, marketChart);
+  }
+  return generateFallbackInsight(tokenData);
+};
+
+const generateAiSdkInsight = async (
+  tokenData: TokenData,
+  marketChart: any | null
+): Promise<InsightResult> => {
+  try {
+    const prompt = buildPrompt(tokenData, marketChart);
+
+    const { text } = await generateText({
+      model: process.env.OPENAI_MODEL || 'openai/gpt-4o-mini',
+      system:
+        'You are a cryptocurrency market analyst. Provide insights in valid JSON format only.',
+      prompt
+    });
+
+    const content = text || '{}';
+    const parsed = JSON.parse(content);
+
+    return {
+      insight: {
+        reasoning: parsed.reasoning || 'Analysis based on current market data',
+        sentiment: parsed.sentiment || 'Neutral',
+        ...parsed
+      },
+      model: {
+        provider: 'ai-sdk',
+        model: process.env.OPENAI_MODEL || 'openai/gpt-4o-mini'
+      }
+    };
+  } catch (error: any) {
+    // eslint-disable-next-line no-console
+    console.error('AI SDK error while generating insight:', error.message);
+    return generateFallbackInsight(tokenData);
+  }
+};
+
+const buildPrompt = (tokenData: TokenData, marketChart: any | null): string => {
+  const { name, symbol, marketData } = tokenData;
+  const priceChange = marketData.priceChangePercentage24h;
+
+  let prompt = `Analyze the following cryptocurrency token and provide insights in JSON format with "reasoning" and "sentiment" fields:
+
+Token: ${name} (${symbol.toUpperCase()})
+Current Price: $${marketData.currentPriceUsd}
+Market Cap: $${marketData.marketCapUsd.toLocaleString()}
+24h Volume: $${marketData.totalVolumeUsd.toLocaleString()}
+24h Price Change: ${priceChange > 0 ? '+' : ''}${priceChange}%
+
+`;
+
+  if (marketChart && marketChart.prices) {
+    const prices: [number, number][] = marketChart.prices;
+    const firstPrice = prices[0]?.[1] || marketData.currentPriceUsd;
+    const lastPrice = prices[prices.length - 1]?.[1] || marketData.currentPriceUsd;
+    const periodChange = ((lastPrice - firstPrice) / firstPrice) * 100;
+    prompt += `Historical Trend (${prices.length} days): ${
+      periodChange > 0 ? '+' : ''
+    }${periodChange.toFixed(2)}%\n\n`;
+  }
+
+  prompt += `Provide a brief reasoning (2-3 sentences) and sentiment (Positive, Neutral, or Negative) in JSON format:
+{
+  "reasoning": "...",
+  "sentiment": "..."
+}`;
+
+  return prompt;
+};
+
+const generateFallbackInsight = (tokenData: TokenData): InsightResult => {
+  const { marketData } = tokenData;
+  const priceChange = marketData.priceChangePercentage24h || 0;
+  const volume = marketData.totalVolumeUsd || 0;
+  const marketCap = marketData.marketCapUsd || 0;
+
+  let sentiment = 'Neutral';
+  let reasoning = '';
+
+  if (priceChange > 5) {
+    sentiment = 'Positive';
+    reasoning = `Strong positive momentum with ${priceChange.toFixed(
+      2
+    )}% gain in 24h. High trading volume of $${volume.toLocaleString()} suggests active interest.`;
+  } else if (priceChange < -5) {
+    sentiment = 'Negative';
+    reasoning = `Significant decline of ${Math.abs(
+      priceChange
+    ).toFixed(2)}% in 24h. Monitor for potential support levels and decreasing liquidity.`;
+  } else {
+    sentiment = 'Neutral';
+    reasoning = `Price movement is relatively stable with ${
+      priceChange > 0 ? '+' : ''
+    }${priceChange.toFixed(
+      2
+    )}% change. Market cap of $${(marketCap / 1e9).toFixed(
+      2
+    )}B indicates ${marketCap > 1e9 ? 'substantial' : 'moderate'} market presence.`;
+  }
+
+  return {
+    insight: {
+      reasoning,
+      sentiment
+    },
+    model: {
+      provider: 'rule-based',
+      model: 'fallback'
+    }
+  };
+};
+
+export default {
+  generateInsight
+};
+
+
