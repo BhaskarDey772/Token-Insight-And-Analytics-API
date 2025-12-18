@@ -6,8 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including dev) to build TypeScript
-RUN npm ci
-
+RUN npm ci --silent || npm install --silent
 # Copy application code
 COPY . .
 
