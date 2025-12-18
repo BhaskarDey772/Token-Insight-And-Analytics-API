@@ -17,7 +17,8 @@ module.exports = {
     '^@models/(.*)$': '<rootDir>/dist/models/$1',
     '^@routes/(.*)$': '<rootDir>/dist/routes/$1',
     '^@services/(.*)$': '<rootDir>/dist/services/$1',
-    '^@types/(.*)$': '<rootDir>/dist/types/$1',
+    '^@app-types/(.*)$': '<rootDir>/dist/types/$1',
+    '^@utils$': '<rootDir>/dist/utils.js',
   },
 };
 

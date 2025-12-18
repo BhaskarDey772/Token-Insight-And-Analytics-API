@@ -1,18 +1,7 @@
 import { OpenAI } from 'openai';
-import { TokenData } from '@services/coingeckoService';
 import { env } from '@config/env';
+import { InsightResult, TokenData } from '@app-types/types';
 
-export interface InsightResult {
-  insight: {
-    reasoning: string;
-    sentiment: string;
-    [key: string]: any;
-  };
-  model: {
-    provider: string;
-    model: string;
-  };
-}
 
 export const generateInsight = async (
   tokenData: TokenData,

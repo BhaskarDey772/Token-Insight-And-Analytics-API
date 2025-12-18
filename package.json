@@ -48,6 +48,7 @@
     "@models": "dist/models",
     "@routes": "dist/routes",
     "@services": "dist/services",
-    "@types": "dist/types"
+    "@app-types": "dist/types",
+    "@utils": "dist/utils"
   }
 }

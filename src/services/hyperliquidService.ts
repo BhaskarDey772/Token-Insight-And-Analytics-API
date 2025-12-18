@@ -1,62 +1,15 @@
 import axios from "axios";
 import { env } from "@config/env";
+import { groupByDate, round } from "@utils";
+import {
+  HyperliquidTrade,
+  HyperliquidFunding,
+  HyperliquidAssetPosition,
+  WalletPnLResponse,
+  DailyPnL
+} from "@app-types/types";
 
 const HYPERLIQUID_API_URL = env.HYPERLIQUID_API_URL;
-
-/* ================= TYPES ================= */
-
-export interface HyperliquidTrade {
-  time: number;
-  closedPnl?: number | string;
-  fee?: number | string;
-}
-
-export interface HyperliquidFunding {
-  time: number;
-  delta?: {
-    usdc?: number | string;
-  };
-}
-
-export interface HyperliquidAssetPosition {
-  position: {
-    coin: string;
-    szi: number | string;     // position size (notional)
-    entryPx: number | string;
-    markPx: number | string;
-  };
-}
-
-export interface DailyPnL {
-  date: string;
-  realized_pnl_usd: number;
-  unrealized_pnl_usd: number;
-  fees_usd: number;
-  funding_usd: number;
-  net_pnl_usd: number;
-  equity_usd: number;
-}
-
-export interface WalletPnLResponse {
-  wallet: string;
-  start: string;
-  end: string;
-  daily: DailyPnL[];
-  summary: {
-    total_realized_usd: number;
-    total_unrealized_usd: number;
-    total_fees_usd: number;
-    total_funding_usd: number;
-    net_pnl_usd: number;
-  };
-  diagnostics: {
-    data_source: string;
-    last_api_call: string;
-    notes: string;
-  };
-}
-
-/* ================= MAIN SERVICE ================= */
 
 export async function fetchWalletPnL(
   wallet: string,
@@ -110,8 +63,6 @@ export async function fetchWalletPnL(
     wallet
   );
 }
-
-/* ================= PNL CALCULATION ================= */
 
 function calculateDailyPnL(
   startDate: string,
@@ -212,18 +163,3 @@ function calculateDailyPnL(
     }
   };
 }
-
-/* ================= HELPERS ================= */
-
-function groupByDate<T extends { time: number }>(
-  items: T[]
-): Record<string, T[]> {
-  return items.reduce((acc, item) => {
-    const key = new Date(item.time).toISOString().slice(0, 10);
-    acc[key] ||= [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<string, T[]>);
-}
-
-const round = (n: number) => Number(n.toFixed(2));
