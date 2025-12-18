@@ -143,13 +143,8 @@ curl -X POST http://localhost:3000/api/token/bitcoin/insight \
 
 Get daily Profit and Loss for a HyperLiquid wallet.
 
-> Note: For this assignment, the API is wired to a single static HyperLiquid user id  
-> `0x020ca66c30bec2c4fe3861a94e4db4a498a35872`.  
-> The `:wallet` path parameter must match this value (case-insensitive), otherwise the
-> API returns a 400 **Unsupported wallet** error.
-
 **Parameters:**
-- `wallet` (path): HyperLiquid wallet/user id (must be `0x020ca66c30bec2c4fe3861a94e4db4a498a35872`)
+- `wallet` (path): HyperLiquid wallet/user id (any valid `0x`-prefixed address)
 - `start` (query): Start date in YYYY-MM-DD format
 - `end` (query): End date in YYYY-MM-DD format
 

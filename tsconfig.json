@@ -11,7 +11,17 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "types": ["node", "jest"],
-    "noImplicitAny": true
+    "noImplicitAny": true,
+    "baseUrl": "src",
+    "paths": {
+      "@config/*": ["config/*"],
+      "@controllers/*": ["controllers/*"],
+      "@middleware/*": ["middleware/*"],
+      "@models/*": ["models/*"],
+      "@routes/*": ["routes/*"],
+      "@services/*": ["services/*"],
+      "@types/*": ["types/*"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

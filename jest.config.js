@@ -7,11 +7,18 @@ module.exports = {
   testMatch: [
     '**/src/tests/**/*.test.js',
   ],
-  collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/tests/**',
-    '!src/server.js',
-  ],
+  // We now test against compiled JS in dist/ via relative requires in tests,
+  // so we don't collect TS coverage here.
+  collectCoverageFrom: [],
+  moduleNameMapper: {
+    '^@config/(.*)$': '<rootDir>/dist/config/$1',
+    '^@controllers/(.*)$': '<rootDir>/dist/controllers/$1',
+    '^@middleware/(.*)$': '<rootDir>/dist/middleware/$1',
+    '^@models/(.*)$': '<rootDir>/dist/models/$1',
+    '^@routes/(.*)$': '<rootDir>/dist/routes/$1',
+    '^@services/(.*)$': '<rootDir>/dist/services/$1',
+    '^@types/(.*)$': '<rootDir>/dist/types/$1',
+  },
 };
 
 

@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { fetchTokenData } from '../services/coingeckoService';
-import { generateInsight } from '../services/aiService';
-import TokenInsight from '../models/TokenInsight';
+import { fetchTokenData } from '@services/coingeckoService';
+import { generateInsight } from '@services/aiService';
+import TokenInsight from '@models/TokenInsight';
+import { env } from '@config/env';
 
 export const getTokenInsight = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -22,11 +23,12 @@ export const getTokenInsight = async (req: Request, res: Response): Promise<void
         symbol: tokenData.symbol,
         name: tokenData.name,
         market_data: {
-          current_price_usd: tokenData.marketData.currentPriceUsd,
-          market_cap_usd: tokenData.marketData.marketCapUsd,
-          total_volume_usd: tokenData.marketData.totalVolumeUsd,
+          current_price: tokenData.marketData.currentPrice,
+          market_cap: tokenData.marketData.marketCap,
+          total_volume: tokenData.marketData.totalVolume,
           price_change_percentage_24h: tokenData.marketData.priceChangePercentage24h
-        }
+        },
+        vs_currency: tokenData.marketData.vsCurrency
       },
       insight: {
         reasoning: insight.reasoning,
@@ -38,25 +40,27 @@ export const getTokenInsight = async (req: Request, res: Response): Promise<void
       }
     };
 
-    try {
-      await TokenInsight.create({
-        tokenId: id,
-        vsCurrency: vs_currency,
-        historyDays: history_days,
-        tokenData: {
-          id: tokenData.id,
-          symbol: tokenData.symbol,
-          name: tokenData.name,
-          marketData: tokenData.marketData
-        },
-        insight,
-        modelInfo: {
-          provider: model.provider,
-          model: model.model
-        }
-      });
-    } catch (dbError: any) {
-      console.warn('Failed to save to database:', dbError.message);
+    if (env.NODE_ENV !== 'test') {
+      try {
+        await TokenInsight.create({
+          tokenId: id,
+          vsCurrency: vs_currency,
+          historyDays: history_days,
+          tokenData: {
+            id: tokenData.id,
+            symbol: tokenData.symbol,
+            name: tokenData.name,
+            marketData: tokenData.marketData
+          },
+          insight,
+          modelInfo: {
+            provider: model.provider,
+            model: model.model
+          }
+        });
+      } catch (dbError: any) {
+        console.warn('Failed to save to database:', dbError.message);
+      }
     }
 
     res.json(response);

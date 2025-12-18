@@ -1,7 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
-import { getTokenInsight } from '../controllers/tokenController';
-import { validateSchema } from '../middleware/validate';
+import { getTokenInsight } from '@controllers/tokenController';
+import { validateSchema } from '@middleware/validate';
 
 const router = express.Router();
 

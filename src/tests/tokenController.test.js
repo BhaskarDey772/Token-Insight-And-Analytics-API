@@ -1,13 +1,14 @@
 const request = require('supertest');
-const app = require('../server');
-const TokenInsight = require('../models/TokenInsight');
+const appModule = require('../../dist/server.js');
+const app = appModule.default || appModule;
+const TokenInsight = require('../../dist/models/TokenInsight.js');
 
-// Mock services
-jest.mock('../services/coingeckoService');
-jest.mock('../services/aiService');
+// Mock services (compiled)
+jest.mock('../../dist/services/coingeckoService.js');
+jest.mock('../../dist/services/aiService.js');
 
-const { fetchTokenData } = require('../services/coingeckoService');
-const { generateInsight } = require('../services/aiService');
+const { fetchTokenData } = require('../../dist/services/coingeckoService.js');
+const { generateInsight } = require('../../dist/services/aiService.js');
 
 describe('Token Insight API', () => {
   beforeEach(() => {

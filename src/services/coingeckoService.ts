@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { TokenMarketData } from '../models/TokenInsight';
+import { TokenMarketData } from '@models/TokenInsight';
+import { env } from '@config/env';
 
-const COINGECKO_API_URL =
-  process.env.COINGECKO_API_URL || 'https://api.coingecko.com/api/v3';
+const COINGECKO_API_URL = env.COINGECKO_API_URL;
 
 export interface TokenData {
   id: string;
@@ -56,15 +56,26 @@ export const fetchTokenData = async (
     }
 
     const marketData = token.market_data || {};
+    const currencyKey = vsCurrency.toLowerCase();
     const tokenData: TokenData = {
       id: token.id,
       symbol: token.symbol,
       name: token.name,
       marketData: {
-        currentPriceUsd: marketData.current_price?.usd || 0,
-        marketCapUsd: marketData.market_cap?.usd || 0,
-        totalVolumeUsd: marketData.total_volume?.usd || 0,
-        priceChangePercentage24h: marketData.price_change_percentage_24h || 0
+        currentPrice:
+          marketData.current_price?.[currencyKey] ??
+          marketData.current_price?.usd ??
+          0,
+        marketCap:
+          marketData.market_cap?.[currencyKey] ??
+          marketData.market_cap?.usd ??
+          0,
+        totalVolume:
+          marketData.total_volume?.[currencyKey] ??
+          marketData.total_volume?.usd ??
+          0,
+        priceChangePercentage24h: marketData.price_change_percentage_24h || 0,
+        vsCurrency
       }
     };
 

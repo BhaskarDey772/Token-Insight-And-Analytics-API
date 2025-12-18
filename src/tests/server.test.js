@@ -1,5 +1,7 @@
 const request = require('supertest');
-const app = require('../server');
+// Use compiled server from dist so Jest doesn't need to parse TypeScript
+const appModule = require('../../dist/server.js');
+const app = appModule.default || appModule;
 
 describe('Server Health Check', () => {
   it('should return health status', async () => {

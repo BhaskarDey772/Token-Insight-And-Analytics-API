@@ -1,13 +1,16 @@
+import 'module-alias/register';
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import connectDB from './config/database';
-import tokenRoutes from './routes/tokenRoutes';
-import hyperliquidRoutes from './routes/hyperliquidRoutes';
-import errorHandler from './middleware/errorHandler';
+import http from 'http';
+import connectDB, { disconnectDB } from '@config/database';
+import tokenRoutes from '@routes/tokenRoutes';
+import hyperliquidRoutes from '@routes/hyperliquidRoutes';
+import errorHandler from '@middleware/errorHandler';
+import { env } from '@config/env';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = env.PORT;
 
 app.use(cors());
 app.use(express.json());
@@ -45,14 +48,16 @@ app.use((req: Request, res: Response) => {
 
 app.use(errorHandler);
 
+let server: http.Server | undefined;
+
 const startServer = async (): Promise<void> => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       // eslint-disable-next-line no-console
       console.log(`Server running on port ${PORT}`);
       // eslint-disable-next-line no-console
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Environment: ${env.NODE_ENV}`);
       // eslint-disable-next-line no-console
       console.log(`Health check: http://localhost:${PORT}/health`);
     });
@@ -63,8 +68,43 @@ const startServer = async (): Promise<void> => {
   }
 };
 
-startServer();
+const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+  // eslint-disable-next-line no-console
+  console.log(`Received ${signal}, shutting down gracefully...`);
 
+  try {
+    await disconnectDB();
+  } catch {
+    // ignore disconnect errors
+  }
+
+  if (server) {
+    server.close(() => {
+      // eslint-disable-next-line no-console
+      console.log('HTTP server closed.');
+      process.exit(0);
+    });
+
+    // Force exit if close takes too long
+    setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.error('Forced shutdown after timeout.');
+      process.exit(1);
+    }, 10000).unref();
+  } else {
+    process.exit(0);
+  }
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+// Note: SIGKILL cannot be intercepted by a Node.js process; the OS will terminate immediately.
+
+if (env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+export { app, startServer };
 export default app;
 
 

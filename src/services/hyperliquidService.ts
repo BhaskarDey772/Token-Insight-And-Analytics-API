@@ -1,8 +1,7 @@
 import axios from "axios";
-import { hyperliquidUserId } from "../types/hyperliquid";
+import { env } from "@config/env";
 
-const HYPERLIQUID_API_URL =
-  process.env.HYPERLIQUID_API_URL || "https://api.hyperliquid.xyz";
+const HYPERLIQUID_API_URL = env.HYPERLIQUID_API_URL;
 
 /* ================= TYPES ================= */
 
@@ -60,6 +59,7 @@ export interface WalletPnLResponse {
 /* ================= MAIN SERVICE ================= */
 
 export async function fetchWalletPnL(
+  wallet: string,
   startDate: string,
   endDate: string
 ): Promise<WalletPnLResponse> {
@@ -69,7 +69,7 @@ export async function fetchWalletPnL(
   /* -------- Fetch Trades -------- */
   const tradesResp = await axios.post(`${HYPERLIQUID_API_URL}/info`, {
     type: "userFillsByTime",
-    user: hyperliquidUserId,
+    user: wallet,
     startTime,
     endTime,
     aggregateByTime: false
@@ -80,7 +80,7 @@ export async function fetchWalletPnL(
   /* -------- Fetch Funding -------- */
   const fundingResp = await axios.post(`${HYPERLIQUID_API_URL}/info`, {
     type: "userFunding",
-    user: hyperliquidUserId,
+    user: wallet,
     startTime,
     endTime
   });
@@ -90,7 +90,7 @@ export async function fetchWalletPnL(
   /* -------- Fetch Account State -------- */
   const stateResp = await axios.post(`${HYPERLIQUID_API_URL}/info`, {
     type: "clearinghouseState",
-    user: hyperliquidUserId
+    user: wallet
   });
 
   const assetPositions =
@@ -106,7 +106,8 @@ export async function fetchWalletPnL(
     trades,
     funding,
     assetPositions,
-    startingEquity
+    startingEquity,
+    wallet
   );
 }
 
@@ -118,7 +119,8 @@ function calculateDailyPnL(
   trades: HyperliquidTrade[],
   funding: HyperliquidFunding[],
   assetPositions: HyperliquidAssetPosition[],
-  startingEquity: number
+  startingEquity: number,
+  wallet: string
 ): WalletPnLResponse {
   const daily: DailyPnL[] = [];
 
@@ -184,7 +186,7 @@ function calculateDailyPnL(
   }
 
   return {
-    wallet: hyperliquidUserId,
+    wallet,
     start: startDate,
     end: endDate,
     daily,

@@ -1,5 +1,6 @@
 import { OpenAI } from 'openai';
-import { TokenData } from './coingeckoService';
+import { TokenData } from '@services/coingeckoService';
+import { env } from '@config/env';
 
 export interface InsightResult {
   insight: {
@@ -29,13 +30,13 @@ const generateOpenAIInsight = async (
 ): Promise<InsightResult> => {
   try {
     const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
+      apiKey: env.OPENAI_API_KEY
     });
 
     const prompt = buildPrompt(tokenData, marketChart);
 
     const response = await client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      model: env.OPENAI_MODEL,
       messages: [
         {
           role: 'system',
@@ -63,7 +64,7 @@ const generateOpenAIInsight = async (
       },
       model: {
         provider: 'openai',
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini'
+        model: env.OPENAI_MODEL
       }
     };
   } catch (error: any) {
@@ -76,21 +77,22 @@ const generateOpenAIInsight = async (
 const buildPrompt = (tokenData: TokenData, marketChart: any | null): string => {
   const { name, symbol, marketData } = tokenData;
   const priceChange = marketData.priceChangePercentage24h;
+  const currency = marketData.vsCurrency.toUpperCase();
 
   let prompt = `Analyze the following cryptocurrency token and provide insights in JSON format with "reasoning" and "sentiment" fields:
 
 Token: ${name} (${symbol.toUpperCase()})
-Current Price: $${marketData.currentPriceUsd}
-Market Cap: $${marketData.marketCapUsd.toLocaleString()}
-24h Volume: $${marketData.totalVolumeUsd.toLocaleString()}
+Current Price: ${marketData.currentPrice} ${currency}
+Market Cap: ${marketData.marketCap.toLocaleString()} ${currency}
+24h Volume: ${marketData.totalVolume.toLocaleString()} ${currency}
 24h Price Change: ${priceChange > 0 ? '+' : ''}${priceChange}%
 
 `;
 
   if (marketChart && marketChart.prices) {
     const prices: [number, number][] = marketChart.prices;
-    const firstPrice = prices[0]?.[1] || marketData.currentPriceUsd;
-    const lastPrice = prices[prices.length - 1]?.[1] || marketData.currentPriceUsd;
+    const firstPrice = prices[0]?.[1] || marketData.currentPrice;
+    const lastPrice = prices[prices.length - 1]?.[1] || marketData.currentPrice;
     const periodChange = ((lastPrice - firstPrice) / firstPrice) * 100;
     prompt += `Historical Trend (${prices.length} days): ${
       periodChange > 0 ? '+' : ''
@@ -109,8 +111,8 @@ Market Cap: $${marketData.marketCapUsd.toLocaleString()}
 const generateFallbackInsight = (tokenData: TokenData): InsightResult => {
   const { marketData } = tokenData;
   const priceChange = marketData.priceChangePercentage24h || 0;
-  const volume = marketData.totalVolumeUsd || 0;
-  const marketCap = marketData.marketCapUsd || 0;
+  const volume = marketData.totalVolume || 0;
+  const marketCap = marketData.marketCap || 0;
 
   let sentiment = 'Neutral';
   let reasoning = '';

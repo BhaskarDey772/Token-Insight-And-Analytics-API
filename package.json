@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
-    "test": "jest --coverage"
+    "test": "NODE_ENV=test npm run build && NODE_ENV=test jest --coverage"
   },
   "keywords": [
     "crypto",
@@ -24,6 +24,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
+    "module-alias": "^2.2.3",
     "mongoose": "^8.0.3",
     "openai": "^4.20.1",
     "zod": "^3.25.76"
@@ -39,5 +40,14 @@
     "supertest": "^6.3.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "_moduleAliases": {
+    "@config": "dist/config",
+    "@controllers": "dist/controllers",
+    "@middleware": "dist/middleware",
+    "@models": "dist/models",
+    "@routes": "dist/routes",
+    "@services": "dist/services",
+    "@types": "dist/types"
   }
 }

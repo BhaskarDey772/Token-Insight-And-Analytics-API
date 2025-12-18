@@ -1,10 +1,11 @@
 import mongoose, { Document, Model } from 'mongoose';
 
 export interface TokenMarketData {
-  currentPriceUsd: number;
-  marketCapUsd: number;
-  totalVolumeUsd: number;
+  currentPrice: number;
+  marketCap: number;
+  totalVolume: number;
   priceChangePercentage24h: number;
+  vsCurrency: string;
 }
 
 export type TokenInsightDocument = Document & {
@@ -44,12 +45,13 @@ const TokenInsightSchema = new mongoose.Schema({
     id: String,
     symbol: String,
     name: String,
-    marketData: {
-      currentPriceUsd: Number,
-      marketCapUsd: Number,
-      totalVolumeUsd: Number,
-      priceChangePercentage24h: Number
-    }
+      marketData: {
+        currentPrice: Number,
+        marketCap: Number,
+        totalVolume: Number,
+        priceChangePercentage24h: Number,
+        vsCurrency: String
+      }
   },
   insight: {
     reasoning: String,
