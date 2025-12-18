@@ -9,9 +9,6 @@ const envSchema = z.object({
     .regex(/^\d+$/)
     .transform((v) => parseInt(v, 10))
     .default('3000'),
-  MONGODB_URI: z
-    .string()
-    .min(1, 'MONGODB_URI is required'),
   COINGECKO_API_URL: z
     .string()
     .url()
@@ -27,9 +24,8 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  // eslint-disable-next-line no-console
   console.error(
-    '❌ Invalid environment configuration:',
+    'Invalid environment configuration:',
     JSON.stringify(parsed.error.format(), null, 2)
   );
   process.exit(1);
@@ -39,8 +35,7 @@ export const env = parsed.data;
 export type Env = typeof env;
 
 if (!env.OPENAI_API_KEY) {
-  // eslint-disable-next-line no-console
   console.warn(
-    '⚠️ OPENAI_API_KEY is not set; falling back to rule-based insights for token insight API.'
+    'OPENAI_API_KEY is not set; falling back to rule-based insights for token insight API.'
   );
 }

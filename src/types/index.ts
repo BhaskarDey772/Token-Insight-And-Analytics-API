@@ -1,5 +1,10 @@
-import { TokenMarketData } from "@models/TokenInsight";
-
+export interface TokenMarketData {
+  currentPrice: number;
+  marketCap: number;
+  totalVolume: number;
+  priceChangePercentage24h: number;
+  vsCurrency: string;
+}
 
 export interface InsightResult {
   insight: {
@@ -77,4 +82,8 @@ export interface WalletPnLResponse {
     last_api_call: string;
     notes: string;
   };
+}
+
+export enum TokenDataSource {
+  COINGECKO = 'coingecko'
 }

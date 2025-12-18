@@ -1,13 +1,13 @@
 import axios from "axios";
-import { env } from "@config/env";
-import { groupByDate, round } from "@utils";
+import { env } from "../config/env";
+import { groupByDate, round } from "../utils";
 import {
   HyperliquidTrade,
   HyperliquidFunding,
   HyperliquidAssetPosition,
   WalletPnLResponse,
   DailyPnL
-} from "@app-types/types";
+} from "../types";
 
 const HYPERLIQUID_API_URL = env.HYPERLIQUID_API_URL;
 

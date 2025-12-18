@@ -1,22 +1,8 @@
 import axios from 'axios';
-import { TokenMarketData } from '@models/TokenInsight';
-import { env } from '@config/env';
-import { FetchTokenDataResult, TokenData } from '@app-types/types';
+import { env } from '../config/env';
+import { FetchTokenDataResult, TokenData } from '../types';
 
 const COINGECKO_API_URL = env.COINGECKO_API_URL;
-
-// export interface TokenData {
-//   id: string;
-//   symbol: string;
-//   name: string;
-//   marketData: TokenMarketData;
-// }
-
-// export interface FetchTokenDataResult {
-//   tokenData: TokenData;
-//   marketChart: any | null;
-//   rawData: any;
-// }
 
 export const fetchTokenData = async (
   tokenId: string,

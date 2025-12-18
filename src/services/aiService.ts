@@ -1,13 +1,13 @@
 import { OpenAI } from 'openai';
-import { env } from '@config/env';
-import { InsightResult, TokenData } from '@app-types/types';
+import { env } from '../config/env';
+import { InsightResult, TokenData } from '../types';
 
 
 export const generateInsight = async (
   tokenData: TokenData,
   marketChart: any | null = null
 ): Promise<InsightResult> => {
-  if (process.env.OPENAI_API_KEY) {
+  if (env.OPENAI_API_KEY) {
     return await generateOpenAIInsight(tokenData, marketChart);
   }
   return generateFallbackInsight(tokenData);

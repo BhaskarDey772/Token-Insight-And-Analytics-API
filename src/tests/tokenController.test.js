@@ -1,7 +1,6 @@
 const request = require('supertest');
 const appModule = require('../../dist/server.js');
 const app = appModule.default || appModule;
-const TokenInsight = require('../../dist/models/TokenInsight.js');
 
 // Mock services (compiled)
 jest.mock('../../dist/services/coingeckoService.js');

@@ -1,23 +1,44 @@
 import { Request, Response } from 'express';
-import { fetchTokenData } from '@services/coingeckoService';
-import { generateInsight } from '@services/aiService';
-import TokenInsight from '@models/TokenInsight';
-import { env } from '@config/env';
+import { z } from 'zod';
+import { fetchTokenData } from '../services/coingeckoService';
+import { generateInsight } from '../services/aiService';
+import { TokenDataSource } from '../types';
+
+const tokenInsightBodySchema = z.object({
+  vs_currency: z.string().min(2).max(10).optional().default('usd'),
+  history_days: z
+    .union([
+      z.number().int().min(1).max(365),
+      z
+        .string()
+        .regex(/^\d+$/)
+        .transform((v) => parseInt(v, 10))
+    ])
+    .optional()
+    .default(30)
+});
 
 export const getTokenInsight = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { vs_currency = 'usd', history_days = 30 } = (req.body || {}) as {
-      vs_currency?: string;
-      history_days?: number;
-    };
+
+    const parseResult = tokenInsightBodySchema.safeParse(req.body ?? {});
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Validation error',
+        issues: parseResult.error.format()
+      });
+      return;
+    }
+
+    const { vs_currency, history_days } = parseResult.data;
 
     const { tokenData, marketChart } = await fetchTokenData(id, vs_currency, history_days);
 
     const { insight, model } = await generateInsight(tokenData, marketChart);
 
     const response = {
-      source: 'coingecko',
+      source: TokenDataSource.COINGECKO,
       token: {
         id: tokenData.id,
         symbol: tokenData.symbol,
@@ -39,29 +60,6 @@ export const getTokenInsight = async (req: Request, res: Response): Promise<void
         model: model.model
       }
     };
-
-    if (env.NODE_ENV !== 'test') {
-      try {
-        await TokenInsight.create({
-          tokenId: id,
-          vsCurrency: vs_currency,
-          historyDays: history_days,
-          tokenData: {
-            id: tokenData.id,
-            symbol: tokenData.symbol,
-            name: tokenData.name,
-            marketData: tokenData.marketData
-          },
-          insight,
-          modelInfo: {
-            provider: model.provider,
-            model: model.model
-          }
-        });
-      } catch (dbError: any) {
-        console.warn('Failed to save to database:', dbError.message);
-      }
-    }
 
     res.json(response);
   } catch (error: any) {
